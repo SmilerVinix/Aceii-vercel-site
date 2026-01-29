@@ -1,30 +1,98 @@
-async function createLink() {
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Custom Discord Link Shortener</title>
+<style>
+body {
+  margin:0;
+  font-family:system-ui, sans-serif;
+  background:#111;
+  color:white;
+  padding:20px;
+}
+h2 { color:#00ff88; margin-bottom:15px; }
+
+label { display:block; margin:8px 0 4px; }
+input, button {
+  padding:12px;
+  margin-bottom:10px;
+  width:100%;
+  border-radius:8px;
+  border:none;
+  font-size:16px;
+}
+input { background:#222; color:white; }
+button {
+  background:#00ff88;
+  color:black;
+  cursor:pointer;
+}
+button:hover { opacity:0.9; }
+
+#result {
+  margin-top:12px;
+  font-size:14px;
+  word-break:break-all;
+  padding:10px;
+  border-radius:8px;
+  background:#000c;
+  border:1px solid #333;
+}
+a { color:#00ff88; text-decoration:underline; }
+</style>
+</head>
+<body>
+
+<h2>Custom Discord Link Shortener</h2>
+
+<label>Short name (your link slug):</label>
+<input id="name" placeholder="5charr">
+
+<label>Original Discord link:</label>
+<input id="original" placeholder="https://discord.com/invite/xxxxxx">
+
+<label>Ending (.com, .net, .gg, etc.):</label>
+<input id="ending" placeholder=".net">
+
+<button onclick="createLink()">Create Short Link</button>
+
+<div id="result"></div>
+
+<script>
+async function createLink(){
   const name = document.getElementById("name").value.trim();
   const original = document.getElementById("original").value.trim();
   let ending = document.getElementById("ending").value.trim();
   const result = document.getElementById("result");
 
-  if (!name || !original || !ending) {
+  if(!name || !original || !ending){
     result.textContent = "Please fill all fields";
     return;
   }
 
-  try {
+  try{
     const r = await fetch("/api/create", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, original, ending })
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body:JSON.stringify({ name, original, ending })
     });
+
     const data = await r.json();
 
-    if (data.shortLink) {
+    if(data.shortLink){
       result.innerHTML = `✅ Short link created: <a href="${data.shortLink}" target="_blank">${data.shortLink}</a>`;
-    } else if (data.error) {
-      result.textContent = `❌ ${data.error}`; // Will show "already taken"
+    } else if(data.error){
+      result.textContent = `❌ ${data.error}`; // "already taken" or other errors
     } else {
       result.textContent = "Error creating link";
     }
-  } catch (e) {
+  } catch(e){
     result.textContent = "Request failed";
   }
 }
+</script>
+
+</body>
+</html>
