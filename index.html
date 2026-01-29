@@ -1,104 +1,134 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Username Availability Scanner</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Username Sniper</title>
 
 <style>
 body {
-  margin: 0;
-  font-family: system-ui, -apple-system;
-  background: #0b0b0b;
-  color: white;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
+  margin:0;
+  font-family:system-ui,-apple-system;
+  background:#0b0b0b;
+  color:white;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  min-height:100vh;
 }
 
 .box {
-  width: 100%;
-  max-width: 420px;
-  padding: 20px;
+  width:100%;
+  max-width:420px;
+  padding:20px;
 }
 
 h1 {
-  color: #00ff88;
-  text-align: center;
+  text-align:center;
+  color:#00ff88;
 }
 
-input, button {
-  width: 100%;
-  padding: 12px;
-  margin-top: 10px;
-  border-radius: 8px;
-  border: none;
-  font-size: 16px;
-}
-
-input {
-  background: #1a1a1a;
-  color: white;
+button, select {
+  width:100%;
+  padding:12px;
+  margin-top:10px;
+  border-radius:8px;
+  border:none;
+  font-size:16px;
 }
 
 button {
-  background: #00ff88;
-  color: black;
-  font-weight: bold;
-  cursor: pointer;
+  background:#00ff88;
+  color:black;
+  font-weight:bold;
 }
 
-#result {
-  margin-top: 15px;
-  padding: 10px;
-  background: #111;
-  border-radius: 8px;
-  font-size: 14px;
-  word-break: break-word;
+select {
+  background:#1a1a1a;
+  color:white;
 }
+
+.log {
+  margin-top:15px;
+  background:#111;
+  padding:10px;
+  border-radius:8px;
+  font-size:14px;
+  max-height:260px;
+  overflow:auto;
+  word-break:break-word;
+}
+.available { color:#00ff88; }
+.taken { color:#ff5555; }
 </style>
 </head>
 <body>
 
 <div class="box">
-  <h1>Username Scanner</h1>
+  <h1>Username Sniper</h1>
 
-  <input id="username" placeholder="Enter username" />
-  <input id="birthday" placeholder="YYYY-MM-DD" />
+  <label>Scan speed (per second)</label>
+  <select id="speed">
+    <option value="1">1 / sec</option>
+    <option value="2">2 / sec</option>
+    <option value="3" selected>3 / sec (MAX)</option>
+  </select>
 
-  <button onclick="check()">Check Availability</button>
+  <button onclick="start()">▶ Start Scanning</button>
+  <button onclick="stop()">⛔ Stop</button>
 
-  <div id="result"></div>
+  <div class="log" id="log"></div>
 </div>
 
 <script>
-async function check() {
-  const username = document.getElementById("username").value.trim();
-  const birthday = document.getElementById("birthday").value.trim();
-  const result = document.getElementById("result");
+let running = false;
+let timer = null;
 
-  if (!username || !birthday) {
-    result.textContent = "Fill in all fields.";
-    return;
+const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+const birthday = "2005-01-01"; // required but safe
+
+function genName() {
+  let name = "";
+  for (let i = 0; i < 5; i++) {
+    name += chars[Math.floor(Math.random() * chars.length)];
   }
+  return name;
+}
 
-  result.textContent = "Checking...";
+async function scan() {
+  if (!running) return;
+
+  const username = genName();
+  const log = document.getElementById("log");
 
   try {
-    const res = await fetch(`/api/validate?username=${encodeURIComponent(username)}&birthday=${birthday}`);
+    const res = await fetch(`/api/validate?username=${username}&birthday=${birthday}`);
     const data = await res.json();
 
-    if (data.available === true) {
-      result.textContent = `✅ AVAILABLE: ${username}`;
-    } else if (data.available === false) {
-      result.textContent = `❌ TAKEN: ${username}`;
+    if (data.available) {
+      log.innerHTML = `<div class="available">✅ AVAILABLE: ${username}</div>` + log.innerHTML;
     } else {
-      result.textContent = "Unexpected response.";
+      log.innerHTML = `<div class="taken">❌ TAKEN: ${username}</div>` + log.innerHTML;
     }
+
   } catch {
-    result.textContent = "Request failed.";
+    log.innerHTML = `<div class="taken">⚠ Request failed</div>` + log.innerHTML;
   }
+}
+
+function start() {
+  if (running) return;
+  running = true;
+
+  const speed = Number(document.getElementById("speed").value);
+  const interval = Math.floor(1000 / speed);
+
+  timer = setInterval(scan, interval);
+}
+
+function stop() {
+  running = false;
+  clearInterval(timer);
 }
 </script>
 
