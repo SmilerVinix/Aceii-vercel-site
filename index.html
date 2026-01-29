@@ -2,61 +2,92 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Roblox Username Scanner</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Roblox Name Scanner</title>
+
 <style>
 body {
+  margin:0;
   background:#0b0b0b;
   color:white;
-  font-family:Arial;
-  padding:15px;
+  font-family:system-ui, Arial;
 }
-h1 { color:#00ff88; }
+.container {
+  padding:12px;
+}
+h1 { color:#00ff88; font-size:20px; }
+.controls {
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+}
 input, button {
-  padding:8px;
-  margin:4px;
+  flex:1;
+  padding:10px;
   background:#111;
   color:white;
   border:1px solid #333;
+  border-radius:6px;
 }
 button { cursor:pointer; }
 .box {
-  border:1px solid #333;
-  padding:10px;
   margin-top:10px;
+  padding:10px;
+  border:1px solid #333;
+  border-radius:6px;
   min-height:120px;
+  font-size:13px;
   white-space:pre-wrap;
+  overflow:auto;
 }
 .available span {
   display:inline-block;
   margin:4px;
-  padding:4px 8px;
+  padding:6px 10px;
+  border-radius:6px;
   background:#00ff8840;
   border:1px solid #00ff88;
-  cursor:pointer;
 }
 .taken { color:#ff5555; }
 .free { color:#00ff88; }
+.stats {
+  margin-top:8px;
+  font-size:12px;
+  opacity:0.8;
+}
 </style>
 </head>
+
 <body>
+<div class="container">
 
 <h1>Roblox Username Scanner</h1>
 
-Length:
-<input id="length" type="number" value="6" min="3" max="20">
+<div class="controls">
+  <input id="minLen" type="number" min="3" max="20" value="5" placeholder="Min">
+  <input id="maxLen" type="number" min="3" max="20" value="7" placeholder="Max">
+  <button onclick="start()">Start</button>
+  <button onclick="stop()">Stop</button>
+</div>
 
-<button onclick="startScan()">Start Scanning</button>
-<button onclick="stopScan()">Stop</button>
+<div class="stats" id="stats">Checked: 0 | Available: 0</div>
 
 <h3>Scan Log</h3>
 <div id="log" class="box"></div>
 
-<h3>Available Usernames (Tap to Copy)</h3>
+<h3>Available (Tap to Copy)</h3>
 <div id="available" class="box available"></div>
+
+<button onclick="exportTxt()">Export Available (.txt)</button>
+
+</div>
 
 <script>
 const CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
 let scanning = false;
+let checked = 0;
+let found = 0;
+let availableList = [];
 
 function randomName(len){
   let name = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[Math.floor(Math.random()*26)];
@@ -66,55 +97,72 @@ function randomName(len){
   return name;
 }
 
-async function checkUsername(name){
-  const res = await fetch("https://users.roblox.com/v1/usernames/validate", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username: name })
+async function check(name){
+  const r = await fetch("https://users.roblox.com/v1/usernames/validate", {
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify({ username:name })
   });
-  return res.json();
+  return r.json();
 }
 
-async function startScan(){
+async function start(){
   if(scanning) return;
   scanning = true;
 
-  const len = Number(document.getElementById("length").value);
-  const log = document.getElementById("log");
-  const avail = document.getElementById("available");
+  const min = Number(minLen.value);
+  const max = Number(maxLen.value);
 
   while(scanning){
+    const len = Math.floor(Math.random()*(max-min+1))+min;
     const name = randomName(len);
 
     try {
-      const data = await checkUsername(name);
+      const data = await check(name);
+      checked++;
 
       if(data.isValid && data.isTaken === false){
+        found++;
+        availableList.push(name);
+
         log.innerHTML += `<span class="free">AVAILABLE</span> → ${name}\n`;
 
-        const span = document.createElement("span");
-        span.textContent = name;
-        span.onclick = () => navigator.clipboard.writeText(name);
-        avail.appendChild(span);
+        const s = document.createElement("span");
+        s.textContent = name;
+        s.onclick = ()=>navigator.clipboard.writeText(name);
+        available.appendChild(s);
 
-        // stop after finding one (like snipers)
-        scanning = false;
-        break;
+        // webhookPlaceholder(name);
       } else {
         log.innerHTML += `<span class="taken">TAKEN</span> → ${name}\n`;
       }
-    } catch(e){
-      log.innerHTML += "Error, retrying...\n";
-    }
 
-    // rate limit (VERY IMPORTANT)
-    await new Promise(r => setTimeout(r, 800));
+      stats.textContent = `Checked: ${checked} | Available: ${found}`;
+    } catch {}
+
+    await new Promise(r=>setTimeout(r,900));
   }
 }
 
-function stopScan(){
-  scanning = false;
+function stop(){ scanning = false; }
+
+function exportTxt(){
+  const blob = new Blob([availableList.join("\n")], {type:"text/plain"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "available_usernames.txt";
+  a.click();
 }
+
+/* PLACEHOLDER ONLY
+function webhookPlaceholder(name){
+  fetch("YOUR_WEBHOOK", {
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify({ content: "Available: "+name })
+  });
+}
+*/
 </script>
 
 </body>
