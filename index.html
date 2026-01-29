@@ -1,10 +1,80 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>My Vercel Site</title>
+<meta charset="UTF-8">
+<title>Roblox Username Generator + Checker</title>
+<style>
+body { background:#0b0b0b; color:white; font-family:Arial; padding:20px; }
+h1 { color:#00ff88; }
+input, button { padding:8px; margin:5px; background:#111; color:white; border:1px solid #333; }
+button:hover { cursor:pointer; background:#1a1a1a; }
+.box { border:1px solid #333; padding:10px; margin-top:15px; min-height:120px; white-space:pre-wrap; }
+.available span { display:inline-block; margin:4px; padding:4px 8px; background:#00ff8830; border:1px solid #00ff88; cursor:pointer; }
+</style>
 </head>
 <body>
-  <h1>Hello World</h1>
-  <p>My site is live 🚀</p>
+
+<h1>Roblox Username Generator + Checker</h1>
+
+Length: <input id="length" type="number" value="6" min="3" max="20">
+Amount: <input id="amount" type="number" value="10" min="1" max="100">
+<button onclick="generate()">Generate + Check</button>
+
+<h3>Generated Names</h3>
+<div id="generated" class="box"></div>
+
+<h3>Available Names (Click to Copy)</h3>
+<div id="available" class="box available"></div>
+
+<script>
+const CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
+
+function randomName(len){
+  let name = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[Math.floor(Math.random()*26)];
+  for(let i=1;i<len;i++){
+    name += CHARS[Math.floor(Math.random()*CHARS.length)];
+  }
+  return name;
+}
+
+async function checkUsername(name){
+  try {
+    const res = await fetch("https://users.roblox.com/v1/usernames/validate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username: name })
+    });
+    const data = await res.json();
+    return data.isValid && data.isTaken === false;
+  } catch(e) {
+    console.error("Check failed for:", name, e);
+    return false;
+  }
+}
+
+async function generate(){
+  const len = Number(document.getElementById("length").value);
+  const amt = Number(document.getElementById("amount").value);
+  const genBox = document.getElementById("generated");
+  const availBox = document.getElementById("available");
+
+  genBox.textContent = "";
+  availBox.innerHTML = "";
+
+  for(let i=0;i<amt;i++){
+    const name = randomName(len);
+    genBox.textContent += name + "\n";
+
+    const available = await checkUsername(name);
+    if(available){
+      const span = document.createElement("span");
+      span.textContent = name;
+      span.onclick = () => navigator.clipboard.writeText(name);
+      availBox.appendChild(span);
+    }
+  }
+}
+</script>
+
 </body>
 </html>
