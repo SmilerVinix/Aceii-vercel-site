@@ -1,59 +1,30 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Discord Link Shortener</title>
-<style>
-body { font-family:system-ui; background:#111; color:white; padding:20px; }
-input, button { padding:10px; margin:5px 0; width:100%; border-radius:6px; border:none; }
-button { background:#00ff88; color:black; cursor:pointer; }
-#result { margin-top:10px; font-size:14px; word-break:break-all; }
-</style>
-</head>
-<body>
-<h2>Custom Discord Link Shortener</h2>
-
-<label>Choose your short name (slug):</label>
-<input id="name" placeholder="your-name">
-
-<label>Original Discord link:</label>
-<input id="original" placeholder="https://discord.com/invite/xxxxx">
-
-<label>Ending (ex: .com, .net, .gg):</label>
-<input id="ending" placeholder=".net">
-
-<button onclick="createLink()">Create Short Link</button>
-
-<div id="result"></div>
-
-<script>
-async function createLink(){
+async function createLink() {
   const name = document.getElementById("name").value.trim();
   const original = document.getElementById("original").value.trim();
   let ending = document.getElementById("ending").value.trim();
+  const result = document.getElementById("result");
 
-  if(!name || !original || !ending){
+  if (!name || !original || !ending) {
     result.textContent = "Please fill all fields";
     return;
   }
 
-  try{
+  try {
     const r = await fetch("/api/create", {
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({ name, original, ending })
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, original, ending })
     });
     const data = await r.json();
-    if(data.shortLink){
+
+    if (data.shortLink) {
       result.innerHTML = `✅ Short link created: <a href="${data.shortLink}" target="_blank">${data.shortLink}</a>`;
-    }else{
-      result.textContent = data.error || "Error creating link";
+    } else if (data.error) {
+      result.textContent = `❌ ${data.error}`; // Will show "already taken"
+    } else {
+      result.textContent = "Error creating link";
     }
-  }catch(e){
+  } catch (e) {
     result.textContent = "Request failed";
   }
 }
-</script>
-</body>
-</html>
