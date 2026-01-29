@@ -1,95 +1,103 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Custom Discord Link Shortener</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Username Availability Scanner</title>
+
 <style>
 body {
-  margin:0;
-  font-family:system-ui, sans-serif;
-  background:#111;
-  color:white;
-  padding:20px;
+  margin: 0;
+  font-family: system-ui, -apple-system;
+  background: #0b0b0b;
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
 }
-h2 { color:#00ff88; margin-bottom:15px; }
 
-label { display:block; margin:8px 0 4px; }
+.box {
+  width: 100%;
+  max-width: 420px;
+  padding: 20px;
+}
+
+h1 {
+  color: #00ff88;
+  text-align: center;
+}
+
 input, button {
-  padding:12px;
-  margin-bottom:10px;
-  width:100%;
-  border-radius:8px;
-  border:none;
-  font-size:16px;
+  width: 100%;
+  padding: 12px;
+  margin-top: 10px;
+  border-radius: 8px;
+  border: none;
+  font-size: 16px;
 }
-input { background:#222; color:white; }
+
+input {
+  background: #1a1a1a;
+  color: white;
+}
+
 button {
-  background:#00ff88;
-  color:black;
-  cursor:pointer;
+  background: #00ff88;
+  color: black;
+  font-weight: bold;
+  cursor: pointer;
 }
-button:hover { opacity:0.9; }
 
 #result {
-  margin-top:12px;
-  font-size:14px;
-  word-break:break-all;
-  padding:10px;
-  border-radius:8px;
-  background:#000c;
-  border:1px solid #333;
+  margin-top: 15px;
+  padding: 10px;
+  background: #111;
+  border-radius: 8px;
+  font-size: 14px;
+  word-break: break-word;
 }
-a { color:#00ff88; text-decoration:underline; }
 </style>
 </head>
 <body>
 
-<h2>Custom Discord Link Shortener</h2>
+<div class="box">
+  <h1>Username Scanner</h1>
 
-<label>Short name (your link slug):</label>
-<input id="name" placeholder="5charr">
+  <input id="username" placeholder="Enter username" />
+  <input id="birthday" placeholder="YYYY-MM-DD" />
 
-<label>Original Discord link:</label>
-<input id="original" placeholder="https://discord.com/invite/xxxxxx">
+  <button onclick="check()">Check Availability</button>
 
-<label>Ending (.com, .net, .gg, etc.):</label>
-<input id="ending" placeholder=".net">
-
-<button onclick="createLink()">Create Short Link</button>
-
-<div id="result"></div>
+  <div id="result"></div>
+</div>
 
 <script>
-async function createLink(){
-  const name = document.getElementById("name").value.trim();
-  const original = document.getElementById("original").value.trim();
-  let ending = document.getElementById("ending").value.trim();
+async function check() {
+  const username = document.getElementById("username").value.trim();
+  const birthday = document.getElementById("birthday").value.trim();
   const result = document.getElementById("result");
 
-  if(!name || !original || !ending){
-    result.textContent = "Please fill all fields";
+  if (!username || !birthday) {
+    result.textContent = "Fill in all fields.";
     return;
   }
 
-  try{
-    const r = await fetch("/api/create", {
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body:JSON.stringify({ name, original, ending })
-    });
+  result.textContent = "Checking...";
 
-    const data = await r.json();
+  try {
+    const res = await fetch(`/api/validate?username=${encodeURIComponent(username)}&birthday=${birthday}`);
+    const data = await res.json();
 
-    if(data.shortLink){
-      result.innerHTML = `✅ Short link created: <a href="${data.shortLink}" target="_blank">${data.shortLink}</a>`;
-    } else if(data.error){
-      result.textContent = `❌ ${data.error}`; // "already taken" or other errors
+    if (data.available === true) {
+      result.textContent = `✅ AVAILABLE: ${username}`;
+    } else if (data.available === false) {
+      result.textContent = `❌ TAKEN: ${username}`;
     } else {
-      result.textContent = "Error creating link";
+      result.textContent = "Unexpected response.";
     }
-  } catch(e){
-    result.textContent = "Request failed";
+  } catch {
+    result.textContent = "Request failed.";
   }
 }
 </script>
