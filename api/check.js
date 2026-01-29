@@ -1,23 +1,27 @@
+import fs from 'fs';
+import path from 'path';
+
 export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
-  }
+  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-  try {
-    const { username } = req.body;
-    if (!username) return res.status(400).json({ error: "Missing username" });
+  const { name, original, ending } = req.body;
 
-    const r = await fetch("https://users.roblox.com/v1/usernames/validate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "User-Agent": "Mozilla/5.0" },
-      body: JSON.stringify({ username })
-    });
-    const data = await r.json();
+  if (!name || !original || !ending) return res.status(400).json({ error: "Missing fields" });
 
-    // Force proper check
-    const available = data.isValid && data.isTaken === false;
-    res.status(200).json({ username, available });
-  } catch (e) {
-    res.status(500).json({ error: "Proxy failed" });
-  }
+  // Load existing links
+  const filePath = path.join(process.cwd(), "data.json");
+  let data = {};
+  if (fs.existsSync(filePath)) data = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+
+  const fullName = `${name}${ending.startsWith('.') ? ending : '.'+ending}`;
+
+  if (data[fullName]) return res.status(409).json({ error: "This link already exists" });
+
+  // Save
+  data[fullName] = original;
+  fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+
+  // Return new short link
+  const shortLink = `https://acee/${fullName}`;
+  res.status(200).json({ shortLink });
 }
