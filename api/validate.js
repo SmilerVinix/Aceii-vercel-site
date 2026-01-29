@@ -1,4 +1,4 @@
-const WEBHOOK = "PUT_YOUR_DISCORD_WEBHOOK_HERE";
+const WEBHOOK = "https://discord.com/api/webhooks/1466364089411436691/2h92K9LE53h21xA-w8EVBr1k_5epU4MkzgC1SZWXShtrtrhua5v2b6lKCSFsV_0t7zmX";
 
 export default async function handler(req, res) {
   const { username } = req.query;
