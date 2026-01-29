@@ -2,207 +2,57 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>RBX Username Scanner</title>
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Discord Link Shortener</title>
 <style>
-:root {
-  --green:#00ff88;
-  --red:#ff4d4d;
-}
-
-* { box-sizing:border-box; }
-body {
-  margin:0;
-  background:black;
-  color:white;
-  font-family:-apple-system,BlinkMacSystemFont,system-ui;
-  overflow:hidden;
-}
-
-#matrix {
-  position:fixed;
-  inset:0;
-  z-index:0;
-}
-
-.app {
-  position:relative;
-  z-index:1;
-  padding:14px;
-  max-width:600px;
-  margin:auto;
-}
-
-.header {
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-}
-
-h1 { font-size:20px; color:var(--green); }
-.status { font-size:12px; padding:4px 8px; border-radius:6px; background:#222; }
-
-.controls {
-  display:flex;
-  gap:8px;
-  margin-top:10px;
-}
-
-button {
-  flex:1;
-  padding:14px;
-  font-size:16px;
-  border:none;
-  border-radius:10px;
-  background:#111;
-  color:white;
-}
-
-button.start { background:var(--green); color:black; }
-button.stop { background:#333; }
-
-.slider { margin:10px 0; }
-
-.box {
-  margin-top:10px;
-  padding:10px;
-  border-radius:10px;
-  background:#000c;
-  border:1px solid #222;
-  font-size:13px;
-  max-height:130px;
-  overflow:auto;
-  white-space:pre-wrap;
-}
-
-.available span {
-  display:inline-block;
-  padding:8px 12px;
-  margin:4px;
-  border-radius:10px;
-  background:#00ff8830;
-  border:1px solid var(--green);
-}
-
-.free { color:var(--green); }
-.taken { color:var(--red); }
-
-.stats { font-size:12px; opacity:.85; margin-top:6px; }
+body { font-family:system-ui; background:#111; color:white; padding:20px; }
+input, button { padding:10px; margin:5px 0; width:100%; border-radius:6px; border:none; }
+button { background:#00ff88; color:black; cursor:pointer; }
+#result { margin-top:10px; font-size:14px; word-break:break-all; }
 </style>
 </head>
-
 <body>
-<canvas id="matrix"></canvas>
+<h2>Custom Discord Link Shortener</h2>
 
-<div class="app">
-  <div class="header">
-    <h1>RBX Scanner</h1>
-    <div id="status" class="status">Idle</div>
-  </div>
+<label>Choose your short name (slug):</label>
+<input id="name" placeholder="your-name">
 
-  <div class="controls">
-    <button class="start" onclick="start()">Start</button>
-    <button class="stop" onclick="stop()">Stop</button>
-  </div>
+<label>Original Discord link:</label>
+<input id="original" placeholder="https://discord.com/invite/xxxxx">
 
-  <div class="slider">
-    <label>Scan speed: <b id="speedVal">100</b> ms</label>
-    <input id="speed" type="range" min="100" max="1500" value="100">
-  </div>
+<label>Ending (ex: .com, .net, .gg):</label>
+<input id="ending" placeholder=".net">
 
-  <div class="stats" id="stats">Checked: 0 | Available: 0</div>
+<button onclick="createLink()">Create Short Link</button>
 
-  <div id="log" class="box"></div>
-
-  <h3>Available (tap to copy)</h3>
-  <div id="available" class="box available"></div>
-</div>
+<div id="result"></div>
 
 <script>
-/* ===== MATRIX BACKGROUND ===== */
-const c = matrix, ctx = c.getContext("2d");
-function rs(){c.width=innerWidth;c.height=innerHeight}
-rs(); addEventListener("resize", rs);
+async function createLink(){
+  const name = document.getElementById("name").value.trim();
+  const original = document.getElementById("original").value.trim();
+  let ending = document.getElementById("ending").value.trim();
 
-const letters="ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
-const fs=14, cols=()=>Math.floor(c.width/fs);
-let drops=Array(cols()).fill(1);
-
-setInterval(()=>{
-  ctx.fillStyle="rgba(0,0,0,0.05)";
-  ctx.fillRect(0,0,c.width,c.height);
-  ctx.fillStyle="#00ff88";
-  ctx.font=fs+"px monospace";
-  drops.forEach((y,i)=>{
-    ctx.fillText(letters[Math.floor(Math.random()*letters.length)], i*fs, y*fs);
-    drops[i]=y*fs>c.height && Math.random()>.98?0:y+1;
-  });
-},50);
-
-/* ===== SCANNER ===== */
-let scanning=false, checked=0, found=0;
-const ALPHA="ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
-const statusEl=document.getElementById("status");
-
-speed.oninput=()=>speedVal.textContent=speed.value;
-
-function genName(){
-  const len = 7 + Math.floor(Math.random()*4); // 7–10 chars
-  let s="ABCDEFGHIJKLMNOPQRSTUVWXYZ"[Math.floor(Math.random()*26)];
-  for(let i=1;i<len;i++) s+=ALPHA[Math.floor(Math.random()*ALPHA.length)];
-  return s;
-}
-
-async function check(username){
-  const r = await fetch("/api/check", {
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body:JSON.stringify({ username })
-  });
-  return r.json(); // returns { username, available }
-}
-
-async function start(){
-  if(scanning) return;
-  scanning=true;
-  statusEl.textContent="Scanning";
-
-  const log=document.getElementById("log");
-  const available=document.getElementById("available");
-  const stats=document.getElementById("stats");
-  const speedValue=Number(speed.value);
-
-  while(scanning){
-    const name=genName();
-    try{
-      const d=await check(name);
-      checked++;
-
-      if(d.available){
-        found++;
-        log.innerHTML+=`<span class="free">AVAILABLE</span> → ${name}\n`;
-        const s=document.createElement("span");
-        s.textContent=name;
-        s.onclick=()=>navigator.clipboard.writeText(name);
-        available.appendChild(s);
-      }else{
-        log.innerHTML+=`<span class="taken">TAKEN</span> → ${name}\n`;
-      }
-
-      stats.textContent=`Checked: ${checked} | Available: ${found}`;
-      log.scrollTop=log.scrollHeight;
-    }catch(e){
-      log.innerHTML+="Error\n";
-    }
-
-    await new Promise(r=>setTimeout(r,speedValue));
+  if(!name || !original || !ending){
+    result.textContent = "Please fill all fields";
+    return;
   }
-}
 
-function stop(){
-  scanning=false;
-  statusEl.textContent="Stopped";
+  try{
+    const r = await fetch("/api/create", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({ name, original, ending })
+    });
+    const data = await r.json();
+    if(data.shortLink){
+      result.innerHTML = `✅ Short link created: <a href="${data.shortLink}" target="_blank">${data.shortLink}</a>`;
+    }else{
+      result.textContent = data.error || "Error creating link";
+    }
+  }catch(e){
+    result.textContent = "Request failed";
+  }
 }
 </script>
 </body>
