@@ -2,16 +2,23 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Roblox Username Scanner</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>RBX Username Scanner</title>
 
 <style>
-html,body {
+:root {
+  --green:#00ff88;
+  --red:#ff4d4d;
+  --bg:#050505;
+}
+
+* { box-sizing:border-box }
+
+body {
   margin:0;
-  padding:0;
   background:black;
   color:white;
-  font-family:system-ui, Arial;
+  font-family:-apple-system,BlinkMacSystemFont,system-ui;
   overflow:hidden;
 }
 
@@ -21,122 +28,154 @@ html,body {
   z-index:0;
 }
 
-.ui {
+.app {
   position:relative;
   z-index:1;
-  padding:12px;
+  padding:14px;
+  max-width:600px;
+  margin:auto;
 }
 
-h1 { color:#00ff88; font-size:20px; }
+.header {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+
+h1 {
+  font-size:20px;
+  color:var(--green);
+}
+
+.status {
+  font-size:12px;
+  padding:4px 8px;
+  border-radius:6px;
+  background:#222;
+}
 
 .controls {
   display:flex;
-  gap:6px;
-  flex-wrap:wrap;
+  gap:8px;
+  margin-top:10px;
 }
 
-input, button {
+button {
   flex:1;
-  padding:10px;
-  background:#111c;
+  padding:14px;
+  font-size:16px;
+  border:none;
+  border-radius:10px;
+  background:#111;
   color:white;
-  border:1px solid #333;
-  border-radius:6px;
 }
 
-button { cursor:pointer; }
+button.start { background:var(--green); color:black; }
+button.stop { background:#333; }
 
-label { font-size:12px; opacity:0.8; }
+.slider {
+  margin:10px 0;
+}
 
 .box {
-  margin-top:8px;
+  margin-top:10px;
   padding:10px;
-  border:1px solid #333;
-  border-radius:6px;
+  border-radius:10px;
   background:#000c;
-  min-height:110px;
+  border:1px solid #222;
   font-size:13px;
-  white-space:pre-wrap;
+  max-height:130px;
   overflow:auto;
+  white-space:pre-wrap;
 }
 
 .available span {
   display:inline-block;
+  padding:8px 12px;
   margin:4px;
-  padding:6px 10px;
-  border-radius:6px;
-  background:#00ff8840;
-  border:1px solid #00ff88;
+  border-radius:10px;
+  background:#00ff8830;
+  border:1px solid var(--green);
 }
 
-.free { color:#00ff88; }
-.taken { color:#ff5555; }
+.free { color:var(--green); }
+.taken { color:var(--red); }
 
-.stats { font-size:12px; opacity:.8; margin-top:4px; }
+.stats {
+  font-size:12px;
+  opacity:.85;
+  margin-top:6px;
+}
 </style>
 </head>
 
 <body>
 <canvas id="matrix"></canvas>
 
-<div class="ui">
-  <h1>Roblox Username Scanner</h1>
-
-  <div class="controls">
-    <input id="minLen" type="number" value="5" min="3" max="20" placeholder="Min Length">
-    <input id="maxLen" type="number" value="7" min="3" max="20" placeholder="Max Length">
-    <button onclick="start()">Start</button>
-    <button onclick="stop()">Stop</button>
+<div class="app">
+  <div class="header">
+    <h1>RBX Scanner</h1>
+    <div id="status" class="status">Idle</div>
   </div>
 
-  <label>Scan Speed (ms)</label>
-  <input id="speed" type="range" min="500" max="2000" value="900">
+  <div class="controls">
+    <button class="start" onclick="start()">Start</button>
+    <button class="stop" onclick="stop()">Stop</button>
+  </div>
+
+  <div class="slider">
+    <label>Scan speed: <b id="speedVal">100</b> ms</label>
+    <input id="speed" type="range" min="100" max="1500" value="100">
+  </div>
 
   <div class="stats" id="stats">Checked: 0 | Available: 0</div>
 
   <div id="log" class="box"></div>
 
-  <h3>Available (Tap to Copy)</h3>
+  <h3>Available (tap to copy)</h3>
   <div id="available" class="box available"></div>
 </div>
 
 <script>
-/* ===== MATRIX BACKGROUND ===== */
-const c = matrix, x = c.getContext("2d");
-function resize(){ c.width=innerWidth; c.height=innerHeight }
-resize(); addEventListener("resize", resize);
+/* MATRIX */
+const c = matrix, ctx = c.getContext("2d");
+function rs(){c.width=innerWidth;c.height=innerHeight}
+rs();addEventListener("resize",rs);
 
-const letters="ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
-const fontSize=14;
-let cols=Math.floor(c.width/fontSize);
-let drops=Array(cols).fill(1);
+const chars="ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
+const fs=14, cols=()=>Math.floor(c.width/fs);
+let drops=Array(cols()).fill(1);
 
 setInterval(()=>{
-  x.fillStyle="rgba(0,0,0,0.05)";
-  x.fillRect(0,0,c.width,c.height);
-  x.fillStyle="#00ff88";
-  x.font=fontSize+"px monospace";
+  ctx.fillStyle="rgba(0,0,0,.05)";
+  ctx.fillRect(0,0,c.width,c.height);
+  ctx.fillStyle="#00ff88";
+  ctx.font=fs+"px monospace";
   drops.forEach((y,i)=>{
-    x.fillText(letters[Math.floor(Math.random()*letters.length)], i*fontSize, y*fontSize);
-    drops[i] = y*fontSize > c.height && Math.random()>.975 ? 0 : y+1;
+    ctx.fillText(chars[Math.random()*chars.length|0],i*fs,y*fs);
+    drops[i]=y*fs>c.height&&Math.random()>.98?0:y+1;
   });
 },50);
 
-/* ===== SCANNER ===== */
-const ALPHA="ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
+/* SCANNER */
 let scanning=false, checked=0, found=0;
+const ALPHA="ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
+const statusEl=document.getElementById("status");
 
-function rand(len){
-  let n="ABCDEFGHIJKLMNOPQRSTUVWXYZ"[Math.floor(Math.random()*26)];
-  for(let i=1;i<len;i++) n+=ALPHA[Math.floor(Math.random()*ALPHA.length)];
-  return n;
+speed.oninput=()=>speedVal.textContent=speed.value;
+
+function gen(){
+  const len = 7 + Math.floor(Math.random()*4); // 7–10 chars
+  let s="ABCDEFGHIJKLMNOPQRSTUVWXYZ"[Math.random()*26|0];
+  for(let i=1;i<len;i++) s+=ALPHA[Math.random()*ALPHA.length|0];
+  return s;
 }
 
-async function check(name){
-  const r = await fetch("/api/check", {
+async function check(u){
+  const r = await fetch("/api/check",{
     method:"POST",
     headers:{ "Content-Type":"application/json" },
-    body:JSON.stringify({ username:name })
+    body:JSON.stringify({ username:u })
   });
   return r.json();
 }
@@ -144,45 +183,40 @@ async function check(name){
 async function start(){
   if(scanning) return;
   scanning=true;
-
-  const min = Number(document.getElementById("minLen").value);
-  const max = Number(document.getElementById("maxLen").value);
-  const speed = Number(document.getElementById("speed").value);
-  const log = document.getElementById("log");
-  const available = document.getElementById("available");
-  const stats = document.getElementById("stats");
+  statusEl.textContent="Scanning";
 
   while(scanning){
-    const len = Math.floor(Math.random()*(max-min+1))+min;
-    const name = rand(len);
-
-    try {
+    const name = gen();
+    try{
       const d = await check(name);
       checked++;
 
       if(d.isValid && d.isTaken===false){
         found++;
-        log.innerHTML += `<span class="free">AVAILABLE</span> → ${name}\n`;
+        log.innerHTML+=`<span class="free">AVAILABLE</span> → ${name}\n`;
 
-        const s = document.createElement("span");
-        s.textContent = name;
-        s.onclick = () => navigator.clipboard.writeText(name);
+        const s=document.createElement("span");
+        s.textContent=name;
+        s.onclick=()=>navigator.clipboard.writeText(name);
         available.appendChild(s);
       } else {
-        log.innerHTML += `<span class="taken">TAKEN</span> → ${name}\n`;
+        log.innerHTML+=`<span class="taken">TAKEN</span> → ${name}\n`;
       }
 
-      stats.textContent = `Checked: ${checked} | Available: ${found}`;
-      log.scrollTop = log.scrollHeight;
-    } catch(e){
-      log.innerHTML += "Error checking username\n";
+      stats.textContent=`Checked: ${checked} | Available: ${found}`;
+      log.scrollTop=log.scrollHeight;
+    }catch(e){
+      log.innerHTML+="Error\n";
     }
 
-    await new Promise(r => setTimeout(r, speed));
+    await new Promise(r=>setTimeout(r,Number(speed.value)));
   }
 }
 
-function stop(){ scanning=false; }
+function stop(){
+  scanning=false;
+  statusEl.textContent="Stopped";
+}
 </script>
 </body>
 </html>
