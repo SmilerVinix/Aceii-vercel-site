@@ -1,33 +1,41 @@
-export default async function handler(req, res) {
-  const { username, birthday } = req.query;
+const WEBHOOK = "PUT_YOUR_DISCORD_WEBHOOK_HERE";
 
-  if (!username || !birthday) {
-    return res.status(400).json({ error: "Missing params" });
-  }
+export default async function handler(req, res) {
+  const { username } = req.query;
+  if (!username) return res.json({ error: "No username" });
 
   try {
     const r = await fetch("https://users.roblox.com/v1/usernames/validate", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "User-Agent": "Mozilla/5.0"
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         username,
-        birthday,
+        birthday: "2000-01-01",
         context: "Signup"
       })
     });
 
-    const data = await r.json();
+    const d = await r.json();
+
+    const available = d.code === 0;
+
+    if (available && WEBHOOK) {
+      await fetch(WEBHOOK, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content: `✅ **AVAILABLE ROBLOX USERNAME**\n\`${username}\``
+        })
+      });
+    }
 
     res.json({
-      available: data.code === 0,
-      code: data.code,
-      message: data.message || null
+      available,
+      reason: d.message || "Unavailable",
+      code: d.code
     });
 
-  } catch (e) {
-    res.status(500).json({ error: "Roblox request failed" });
+  } catch {
+    res.status(500).json({ error: "Request failed" });
   }
 }
