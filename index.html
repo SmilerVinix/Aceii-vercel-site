@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Roblox Name Scanner</title>
+<title>Roblox Username Scanner</title>
 
 <style>
 html,body {
@@ -15,32 +15,24 @@ html,body {
   overflow:hidden;
 }
 
-/* Matrix canvas */
 #matrix {
   position:fixed;
-  top:0;
-  left:0;
-  width:100%;
-  height:100%;
+  inset:0;
   z-index:0;
 }
 
-/* UI */
 .ui {
   position:relative;
   z-index:1;
   padding:12px;
 }
 
-h1 {
-  color:#00ff88;
-  font-size:20px;
-}
+h1 { color:#00ff88; font-size:20px; }
 
 .controls {
   display:flex;
-  flex-wrap:wrap;
   gap:6px;
+  flex-wrap:wrap;
 }
 
 input, button {
@@ -52,14 +44,9 @@ input, button {
   border-radius:6px;
 }
 
-button {
-  cursor:pointer;
-}
+button { cursor:pointer; }
 
-label {
-  font-size:12px;
-  opacity:0.8;
-}
+label { font-size:12px; opacity:0.8; }
 
 .box {
   margin-top:8px;
@@ -85,84 +72,68 @@ label {
 .free { color:#00ff88; }
 .taken { color:#ff5555; }
 
-.stats {
-  font-size:12px;
-  opacity:0.8;
-  margin-top:4px;
-}
+.stats { font-size:12px; opacity:.8; margin-top:4px; }
 </style>
 </head>
 
 <body>
-
 <canvas id="matrix"></canvas>
 
 <div class="ui">
   <h1>Roblox Username Scanner</h1>
 
   <div class="controls">
-    <input id="minLen" type="number" min="3" max="20" value="5" placeholder="Min">
-    <input id="maxLen" type="number" min="3" max="20" value="7" placeholder="Max">
+    <input id="minLen" type="number" value="5" min="3" max="20" placeholder="Min Length">
+    <input id="maxLen" type="number" value="7" min="3" max="20" placeholder="Max Length">
     <button onclick="start()">Start</button>
     <button onclick="stop()">Stop</button>
   </div>
 
-  <label>Scan speed (ms)</label>
-  <input id="speed" type="range" min="400" max="2000" value="900">
+  <label>Scan Speed (ms)</label>
+  <input id="speed" type="range" min="500" max="2000" value="900">
 
   <div class="stats" id="stats">Checked: 0 | Available: 0</div>
 
-  <div class="box" id="log"></div>
+  <div id="log" class="box"></div>
 
   <h3>Available (Tap to Copy)</h3>
-  <div class="box available" id="available"></div>
+  <div id="available" class="box available"></div>
 </div>
 
 <script>
-/* ================= MATRIX BACKGROUND ================= */
-const canvas = document.getElementById("matrix");
-const ctx = canvas.getContext("2d");
+/* ===== MATRIX BACKGROUND ===== */
+const c = matrix, x = c.getContext("2d");
+function resize(){ c.width=innerWidth; c.height=innerHeight }
+resize(); addEventListener("resize", resize);
 
-function resize(){
-  canvas.width = innerWidth;
-  canvas.height = innerHeight;
-}
-resize();
-addEventListener("resize", resize);
+const letters="ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
+const fontSize=14;
+let cols=Math.floor(c.width/fontSize);
+let drops=Array(cols).fill(1);
 
-const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
-const fontSize = 14;
-let columns = Math.floor(canvas.width / fontSize);
-let drops = Array(columns).fill(1);
-
-function drawMatrix(){
-  ctx.fillStyle = "rgba(0,0,0,0.05)";
-  ctx.fillRect(0,0,canvas.width,canvas.height);
-  ctx.fillStyle = "#00ff88";
-  ctx.font = fontSize+"px monospace";
-
+setInterval(()=>{
+  x.fillStyle="rgba(0,0,0,0.05)";
+  x.fillRect(0,0,c.width,c.height);
+  x.fillStyle="#00ff88";
+  x.font=fontSize+"px monospace";
   drops.forEach((y,i)=>{
-    const text = letters[Math.floor(Math.random()*letters.length)];
-    ctx.fillText(text, i*fontSize, y*fontSize);
-    drops[i] = y*fontSize > canvas.height && Math.random()>0.975 ? 0 : y+1;
+    x.fillText(letters[Math.floor(Math.random()*letters.length)], i*fontSize, y*fontSize);
+    drops[i] = y*fontSize > c.height && Math.random()>.975 ? 0 : y+1;
   });
-}
-setInterval(drawMatrix, 50);
+},50);
 
-/* ================= SCANNER ================= */
-const CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
-let scanning = false;
-let checked = 0;
-let found = 0;
+/* ===== SCANNER ===== */
+const ALPHA="ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
+let scanning=false, checked=0, found=0;
 
-function randomName(len){
-  let n = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[Math.floor(Math.random()*26)];
-  for(let i=1;i<len;i++) n += CHARS[Math.floor(Math.random()*CHARS.length)];
+function rand(len){
+  let n="ABCDEFGHIJKLMNOPQRSTUVWXYZ"[Math.floor(Math.random()*26)];
+  for(let i=1;i<len;i++) n+=ALPHA[Math.floor(Math.random()*ALPHA.length)];
   return n;
 }
 
 async function check(name){
-  const r = await fetch("https://users.roblox.com/v1/usernames/validate", {
+  const r = await fetch("/api/check", {
     method:"POST",
     headers:{ "Content-Type":"application/json" },
     body:JSON.stringify({ username:name })
@@ -172,26 +143,30 @@ async function check(name){
 
 async function start(){
   if(scanning) return;
-  scanning = true;
+  scanning=true;
 
-  const min = Number(minLen.value);
-  const max = Number(maxLen.value);
+  const min = Number(document.getElementById("minLen").value);
+  const max = Number(document.getElementById("maxLen").value);
+  const speed = Number(document.getElementById("speed").value);
+  const log = document.getElementById("log");
+  const available = document.getElementById("available");
+  const stats = document.getElementById("stats");
 
   while(scanning){
     const len = Math.floor(Math.random()*(max-min+1))+min;
-    const name = randomName(len);
+    const name = rand(len);
 
     try {
-      const data = await check(name);
+      const d = await check(name);
       checked++;
 
-      if(data.isValid && data.isTaken === false){
+      if(d.isValid && d.isTaken===false){
         found++;
         log.innerHTML += `<span class="free">AVAILABLE</span> → ${name}\n`;
 
         const s = document.createElement("span");
         s.textContent = name;
-        s.onclick = ()=>navigator.clipboard.writeText(name);
+        s.onclick = () => navigator.clipboard.writeText(name);
         available.appendChild(s);
       } else {
         log.innerHTML += `<span class="taken">TAKEN</span> → ${name}\n`;
@@ -199,17 +174,15 @@ async function start(){
 
       stats.textContent = `Checked: ${checked} | Available: ${found}`;
       log.scrollTop = log.scrollHeight;
+    } catch(e){
+      log.innerHTML += "Error checking username\n";
+    }
 
-    } catch {}
-
-    await new Promise(r=>setTimeout(r, Number(speed.value)));
+    await new Promise(r => setTimeout(r, speed));
   }
 }
 
-function stop(){
-  scanning = false;
-}
+function stop(){ scanning=false; }
 </script>
-
 </body>
 </html>
