@@ -1,51 +1,36 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Username Sniper</title>
+<title>Roblox Username Scanner</title>
 
 <style>
 body {
-  margin:0;
-  font-family:system-ui,-apple-system;
   background:#0b0b0b;
   color:white;
+  font-family:system-ui;
   display:flex;
   justify-content:center;
-  align-items:center;
   min-height:100vh;
 }
-
 .box {
   width:100%;
   max-width:420px;
   padding:20px;
 }
+h1 { color:#00ff88; text-align:center; }
 
-h1 {
-  text-align:center;
-  color:#00ff88;
-}
-
-button, select {
+select, button {
   width:100%;
   padding:12px;
   margin-top:10px;
   border-radius:8px;
   border:none;
-  font-size:16px;
 }
-
 button {
   background:#00ff88;
-  color:black;
   font-weight:bold;
-}
-
-select {
-  background:#1a1a1a;
-  color:white;
 }
 
 .log {
@@ -53,81 +38,81 @@ select {
   background:#111;
   padding:10px;
   border-radius:8px;
-  font-size:14px;
-  max-height:260px;
+  max-height:280px;
   overflow:auto;
-  word-break:break-word;
+  font-size:14px;
 }
-.available { color:#00ff88; }
-.taken { color:#ff5555; }
+.ok { color:#00ff88; }
+.bad { color:#ff5555; }
 </style>
 </head>
 <body>
 
 <div class="box">
-  <h1>Username Sniper</h1>
+  <h1>Username Scanner</h1>
 
-  <label>Scan speed (per second)</label>
-  <select id="speed">
-    <option value="1">1 / sec</option>
-    <option value="2">2 / sec</option>
-    <option value="3" selected>3 / sec (MAX)</option>
+  <label>Username length</label>
+  <select id="length">
+    <option value="3">3</option>
+    <option value="4">4</option>
+    <option value="5" selected>5</option>
+    <option value="6">6</option>
+    <option value="8">8</option>
+    <option value="10">10</option>
+    <option value="20">20</option>
   </select>
 
-  <button onclick="start()">▶ Start Scanning</button>
+  <label>Scan speed</label>
+  <select id="speed">
+    <option value="1">1/sec</option>
+    <option value="2">2/sec</option>
+    <option value="3" selected>3/sec</option>
+  </select>
+
+  <button onclick="start()">▶ Start</button>
   <button onclick="stop()">⛔ Stop</button>
 
   <div class="log" id="log"></div>
 </div>
 
 <script>
-let running = false;
-let timer = null;
+let running=false, timer=null;
+const chars="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
-const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-const birthday = "2005-01-01"; // required but safe
-
-function genName() {
-  let name = "";
-  for (let i = 0; i < 5; i++) {
-    name += chars[Math.floor(Math.random() * chars.length)];
+function gen(len){
+  let s="";
+  for(let i=0;i<len;i++){
+    s+=chars[Math.floor(Math.random()*chars.length)];
   }
-  return name;
+  return s;
 }
 
-async function scan() {
-  if (!running) return;
+async function scan(){
+  if(!running) return;
 
-  const username = genName();
-  const log = document.getElementById("log");
+  const len=Number(document.getElementById("length").value);
+  const name=gen(len);
+  const log=document.getElementById("log");
 
-  try {
-    const res = await fetch(`/api/validate?username=${username}&birthday=${birthday}`);
-    const data = await res.json();
+  const r=await fetch(`/api/validate?username=${name}`);
+  const d=await r.json();
 
-    if (data.available) {
-      log.innerHTML = `<div class="available">✅ AVAILABLE: ${username}</div>` + log.innerHTML;
-    } else {
-      log.innerHTML = `<div class="taken">❌ TAKEN: ${username}</div>` + log.innerHTML;
-    }
-
-  } catch {
-    log.innerHTML = `<div class="taken">⚠ Request failed</div>` + log.innerHTML;
+  if(d.available){
+    log.innerHTML=`<div class="ok">✅ AVAILABLE: ${name}</div>`+log.innerHTML;
+  }else{
+    log.innerHTML=`<div class="bad">❌ ${name} (${d.reason})</div>`+log.innerHTML;
   }
 }
 
-function start() {
-  if (running) return;
-  running = true;
-
-  const speed = Number(document.getElementById("speed").value);
-  const interval = Math.floor(1000 / speed);
-
-  timer = setInterval(scan, interval);
+function start(){
+  if(running) return;
+  running=true;
+  const sp=Number(document.getElementById("speed").value);
+  timer=setInterval(scan,1000/sp);
 }
 
-function stop() {
-  running = false;
+function stop(){
+  running=false;
   clearInterval(timer);
 }
 </script>
