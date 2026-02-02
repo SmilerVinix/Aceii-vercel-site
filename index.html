@@ -1,121 +1,196 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Roblox Username Scanner</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Roblox ACE SCAN</title>
 
 <style>
 body {
   background:#0b0b0b;
   color:white;
-  font-family:system-ui;
+  font-family:system-ui, -apple-system, BlinkMacSystemFont;
   display:flex;
   justify-content:center;
+  align-items:flex-start;
   min-height:100vh;
+  margin:0;
+  padding:20px;
 }
+
 .box {
   width:100%;
   max-width:420px;
   padding:20px;
+  background:#0f0f0f;
+  border-radius:12px;
 }
-h1 { color:#00ff88; text-align:center; }
+
+h1 {
+  color:#00ff88;
+  text-align:center;
+  margin-top:0;
+}
+
+label {
+  display:block;
+  margin-top:12px;
+  opacity:.85;
+}
 
 select, button {
   width:100%;
   padding:12px;
-  margin-top:10px;
+  margin-top:8px;
   border-radius:8px;
   border:none;
+  font-size:15px;
 }
+
 button {
   background:#00ff88;
-  font-weight:bold;
+  font-weight:700;
+  cursor:pointer;
 }
+
+button.stop {
+  background:#ff5555;
+  margin-top:8px;
+}
+
+button:disabled {
+  opacity:.5;
+  cursor:not-allowed;
+}
+
+.status {
+  margin-top:10px;
+  text-align:center;
+  font-weight:600;
+}
+
+.status.run { color:#00ff88; }
+.status.stop { color:#ff5555; }
 
 .log {
   margin-top:15px;
   background:#111;
   padding:10px;
   border-radius:8px;
-  max-height:280px;
+  max-height:300px;
   overflow:auto;
   font-size:14px;
 }
+
 .ok { color:#00ff88; }
 .bad { color:#ff5555; }
+.err { color:#ffaa00; }
 </style>
 </head>
-<body>
 
+<body>
 <div class="box">
   <h1>Username Scanner</h1>
 
   <label>Username length</label>
   <select id="length">
-    <option value="3">3</option>
-    <option value="4">4</option>
-    <option value="5" selected>5</option>
-    <option value="6">6</option>
-    <option value="8">8</option>
-    <option value="10">10</option>
-    <option value="20">20</option>
+    <option>3</option>
+    <option>4</option>
+    <option selected>5</option>
+    <option>6</option>
+    <option>8</option>
+    <option>10</option>
+    <option>20</option>
   </select>
 
   <label>Scan speed</label>
   <select id="speed">
-    <option value="1">1/sec</option>
-    <option value="2">2/sec</option>
-    <option value="3" selected>3/sec</option>
+    <option value="1">1 / sec</option>
+    <option value="2">2 / sec</option>
+    <option value="3" selected>3 / sec</option>
   </select>
 
-  <button onclick="start()">▶ Start</button>
-  <button onclick="stop()">⛔ Stop</button>
+  <button id="startBtn">▶ Start</button>
+  <button id="stopBtn" class="stop" disabled>⛔ Stop</button>
 
+  <div id="status" class="status stop">STOPPED</div>
   <div class="log" id="log"></div>
 </div>
 
 <script>
-let running=false, timer=null;
-const chars="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+let running = false;
+let timer = null;
 
-function gen(len){
-  let s="";
-  for(let i=0;i<len;i++){
-    s+=chars[Math.floor(Math.random()*chars.length)];
+const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+const logEl = document.getElementById("log");
+const statusEl = document.getElementById("status");
+const startBtn = document.getElementById("startBtn");
+const stopBtn = document.getElementById("stopBtn");
+
+function gen(len) {
+  let s = "";
+  for (let i = 0; i < len; i++) {
+    s += chars[Math.floor(Math.random() * chars.length)];
   }
   return s;
 }
 
-async function scan(){
-  if(!running) return;
+function addLog(html) {
+  logEl.insertAdjacentHTML("afterbegin", html);
 
-  const len=Number(document.getElementById("length").value);
-  const name=gen(len);
-  const log=document.getElementById("log");
-
-  const r=await fetch(`/api/validate?username=${name}`);
-  const d=await r.json();
-
-  if(d.available){
-    log.innerHTML=`<div class="ok">✅ AVAILABLE: ${name}</div>`+log.innerHTML;
-  }else{
-    log.innerHTML=`<div class="bad">❌ ${name} (${d.reason})</div>`+log.innerHTML;
+  // limit log size
+  while (logEl.children.length > 120) {
+    logEl.removeChild(logEl.lastChild);
   }
 }
 
-function start(){
-  if(running) return;
-  running=true;
-  const sp=Number(document.getElementById("speed").value);
-  timer=setInterval(scan,1000/sp);
+async function scan() {
+  if (!running) return;
+
+  const len = Number(document.getElementById("length").value);
+  const name = gen(len);
+
+  try {
+    const r = await fetch(`/api/validate?username=${encodeURIComponent(name)}`);
+    const d = await r.json();
+
+    if (d.available) {
+      addLog(`<div class="ok">✅ AVAILABLE: ${name}</div>`);
+    } else {
+      addLog(`<div class="bad">❌ ${name} (${d.reason || "taken"})</div>`);
+    }
+  } catch (e) {
+    addLog(`<div class="err">⚠ error checking ${name}</div>`);
+  }
 }
 
-function stop(){
-  running=false;
+function start() {
+  if (running) return;
+
+  running = true;
+  startBtn.disabled = true;
+  stopBtn.disabled = false;
+
+  statusEl.textContent = "RUNNING";
+  statusEl.className = "status run";
+
+  const sp = Number(document.getElementById("speed").value);
+  timer = setInterval(scan, 1000 / sp);
+}
+
+function stop() {
+  running = false;
   clearInterval(timer);
-}
-</script>
 
+  startBtn.disabled = false;
+  stopBtn.disabled = true;
+
+  statusEl.textContent = "STOPPED";
+  statusEl.className = "status stop";
+}
+
+startBtn.onclick = start;
+stopBtn.onclick = stop;
+</script>
 </body>
 </html>
