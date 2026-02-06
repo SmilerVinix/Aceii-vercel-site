@@ -1,177 +1,316 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RBX Username Scanner</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>RedShift UserSearcher</title>
 
-<style>
-* { box-sizing:border-box; }
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
 
-body {
-  margin:0;
-  background:#0a0a0a;
-  color:#fff;
-  font-family:Inter, system-ui, sans-serif;
-  display:flex;
-  justify-content:center;
-  min-height:100vh;
-  padding:20px;
-}
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
-.app {
-  width:100%;
-  max-width:420px;
-  background:#0f0f0f;
-  border-radius:14px;
-  padding:20px;
-}
+    body {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #0a0015, #12002a, #1a003f);
+      color: #e0e0ff;
+      font-family: 'Roboto Mono', monospace;
+      overflow-x: hidden;
+      background-attachment: fixed;
+    }
 
-h1 {
-  text-align:center;
-  color:#00ff88;
-  margin:0 0 15px;
-}
+    .app {
+      width: 100%;
+      max-width: 480px;
+      margin: 30px auto;
+      padding: 28px 24px;
+      background: rgba(15, 5, 35, 0.78);
+      border-radius: 18px;
+      border: 1px solid rgba(255, 0, 120, 0.18);
+      box-shadow: 
+        0 0 60px rgba(180, 0, 255, 0.25),
+        inset 0 0 30px rgba(120, 0, 255, 0.08);
+      backdrop-filter: blur(10px);
+      position: relative;
+      overflow: hidden;
+    }
 
-.row {
-  margin-top:12px;
-}
+    .app::before {
+      content: "";
+      position: absolute;
+      inset: -50%;
+      background: radial-gradient(circle at 30% 20%, rgba(255,0,180,0.12), transparent 40%);
+      pointer-events: none;
+      animation: pulse-bg 18s infinite alternate;
+    }
 
-select, button {
-  width:100%;
-  padding:12px;
-  border-radius:10px;
-  border:none;
-  font-size:15px;
-}
+    @keyframes pulse-bg {
+      0% { transform: scale(1.1); opacity: 0.5; }
+      100% { transform: scale(1.4); opacity: 0.8; }
+    }
 
-select {
-  background:#151515;
-  color:#fff;
-}
+    h1 {
+      text-align: center;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 2.4rem;
+      font-weight: 900;
+      background: linear-gradient(90deg, #ff00aa, #aa00ff, #00ffff);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      text-shadow: 0 0 20px rgba(170, 0, 255, 0.7);
+      margin-bottom: 24px;
+      letter-spacing: 2px;
+    }
 
-button {
-  background:#00ff88;
-  font-weight:700;
-  cursor:pointer;
-}
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 22px;
+    }
 
-button.stop {
-  background:#ff4444;
-  margin-top:8px;
-}
+    select, button {
+      width: 100%;
+      padding: 14px;
+      border-radius: 10px;
+      border: 1px solid rgba(180, 0, 255, 0.4);
+      background: rgba(30, 10, 60, 0.6);
+      color: #e0e0ff;
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.22s;
+    }
 
-button:disabled {
-  opacity:.5;
-}
+    select:hover, select:focus {
+      border-color: #ff00cc;
+      box-shadow: 0 0 16px rgba(255, 0, 200, 0.4);
+      background: rgba(50, 20, 90, 0.7);
+    }
 
-.status {
-  margin-top:10px;
-  text-align:center;
-  font-weight:600;
-}
+    button {
+      grid-column: span 2;
+      background: linear-gradient(90deg, #ff0066, #cc00ff);
+      border: none;
+      font-weight: 700;
+      letter-spacing: 1px;
+      box-shadow: 0 6px 20px rgba(200, 0, 180, 0.5);
+      text-transform: uppercase;
+    }
 
-.log {
-  margin-top:15px;
-  background:#111;
-  border-radius:10px;
-  padding:10px;
-  max-height:320px;
-  overflow:auto;
-  font-size:14px;
-}
+    button:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 30px rgba(220, 0, 200, 0.7);
+    }
 
-.ok { color:#00ff88; }
-.bad { color:#ff5555; }
-</style>
+    button.stop {
+      background: linear-gradient(90deg, #ff3366, #ff4444);
+      box-shadow: 0 6px 20px rgba(255, 60, 80, 0.5);
+    }
+
+    .stats {
+      display: flex;
+      justify-content: space-between;
+      margin: 18px 0;
+      font-size: 0.95rem;
+      color: #bb99ff;
+      text-shadow: 0 0 8px rgba(180, 100, 255, 0.5);
+    }
+
+    .status {
+      text-align: center;
+      font-size: 1.3rem;
+      font-weight: 700;
+      margin: 12px 0 20px;
+      letter-spacing: 2px;
+    }
+
+    .status.running { color: #00ffaa; text-shadow: 0 0 15px #00ffaa; }
+    .status.stopped { color: #ff6666; text-shadow: 0 0 15px #ff6666; }
+
+    .log {
+      background: rgba(10, 5, 30, 0.75);
+      border-radius: 12px;
+      padding: 14px;
+      max-height: 380px;
+      overflow-y: auto;
+      font-size: 0.94rem;
+      border: 1px solid rgba(120, 0, 255, 0.15);
+      box-shadow: inset 0 0 20px rgba(0,0,0,0.6);
+    }
+
+    .log-entry {
+      margin: 6px 0;
+      padding: 6px 10px;
+      border-radius: 6px;
+      background: rgba(20, 10, 50, 0.4);
+      transition: all 0.18s;
+    }
+
+    .ok    { background: rgba(0, 220, 140, 0.18); color: #00ffbb; }
+    .bad   { background: rgba(255, 60, 80, 0.18); color: #ff7777; }
+    .error { background: rgba(255, 180, 60, 0.18); color: #ffcc66; }
+
+    .log::-webkit-scrollbar {
+      width: 6px;
+    }
+    .log::-webkit-scrollbar-track {
+      background: rgba(40,20,80,0.3);
+    }
+    .log::-webkit-scrollbar-thumb {
+      background: #aa44ff;
+      border-radius: 3px;
+    }
+
+    @keyframes glow {
+      0%,100% { text-shadow: 0 0 10px currentColor; }
+      50%     { text-shadow: 0 0 25px currentColor, 0 0 40px currentColor; }
+    }
+  </style>
 </head>
-
 <body>
+
 <div class="app">
-  <h1>RBX Name Scanner</h1>
+  <h1>RedShift UserSearcher</h1>
 
-  <div class="row">
+  <div class="controls">
     <select id="length">
-      <option>3</option>
-      <option>4</option>
-      <option selected>5</option>
-      <option>6</option>
-      <option>8</option>
-      <option>10</option>
-      <option>20</option>
+      <option value="3">Length: 3</option>
+      <option value="4">Length: 4</option>
+      <option value="5" selected>Length: 5</option>
+      <option value="6">Length: 6</option>
+      <option value="7">Length: 7</option>
+      <option value="8">Length: 8</option>
+      <option value="10">Length: 10</option>
     </select>
-  </div>
 
-  <div class="row">
     <select id="speed">
-      <option value="1">1 / sec</option>
+      <option value="1">1 check/sec</option>
       <option value="2">2 / sec</option>
       <option value="3" selected>3 / sec</option>
+      <option value="5">5 / sec (risky)</option>
     </select>
   </div>
 
-  <button id="start">▶ Start</button>
-  <button id="stop" class="stop" disabled>⛔ Stop</button>
+  <button id="start">▶ Launch Scan</button>
+  <button id="stop" class="stop" disabled>⛔ Abort</button>
 
-  <div class="status" id="status">STOPPED</div>
+  <div class="stats">
+    <span>Checked: <span id="count">0</span></span>
+    <span>Available: <span id="avail">0</span></span>
+  </div>
+
+  <div class="status stopped" id="status">OFFLINE</div>
+
   <div class="log" id="log"></div>
 </div>
 
 <script>
-let running=false, timer;
-const chars="abcdefghijklmnopqrstuvwxyz0123456789";
-const log=document.getElementById("log");
-const status=document.getElementById("status");
+const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+const logEl   = document.getElementById("log");
+const statusEl = document.getElementById("status");
+const countEl  = document.getElementById("count");
+const availEl  = document.getElementById("avail");
+const startBtn = document.getElementById("start");
+const stopBtn  = document.getElementById("stop");
 
-function gen(len){
-  let s="";
-  for(let i=0;i<len;i++){
-    s+=chars[Math.floor(Math.random()*chars.length)];
+let running = false;
+let timer;
+let checked = 0;
+let available = 0;
+
+function randomName(len) {
+  let s = "";
+  for (let i = 0; i < len; i++) {
+    s += chars[Math.floor(Math.random() * chars.length)];
   }
   return s;
 }
 
-function add(html){
-  log.insertAdjacentHTML("afterbegin",html);
-  while(log.children.length>120) log.removeChild(log.lastChild);
-}
+function addLog(msg, type = "info") {
+  const div = document.createElement("div");
+  div.className = `log-entry ${type}`;
+  div.textContent = msg;
+  logEl.insertAdjacentElement("afterbegin", div);
 
-async function scan(){
-  if(!running) return;
-
-  const len=+length.value;
-  const name=gen(len);
-
-  try{
-    const r=await fetch(`/api/validate?username=${name}`);
-    const d=await r.json();
-
-    if(d.available){
-      add(`<div class="ok">✔ ${name} AVAILABLE</div>`);
-    }else{
-      add(`<div class="bad">✖ ${name}</div>`);
-    }
-  }catch{
-    add(`<div class="bad">⚠ error</div>`);
+  // Keep only last 150 entries
+  while (logEl.children.length > 150) {
+    logEl.removeChild(logEl.lastChild);
   }
 }
 
-start.onclick=()=>{
-  if(running) return;
-  running=true;
-  start.disabled=true;
-  stop.disabled=false;
-  status.textContent="RUNNING";
-  timer=setInterval(scan,1000/+speed.value);
-};
+async function check() {
+  if (!running) return;
 
-stop.onclick=()=>{
-  running=false;
+  const len = parseInt(document.getElementById("length").value);
+  const name = randomName(len);
+
+  checked++;
+  countEl.textContent = checked;
+
+  try {
+    // Using real Roblox validate endpoint (may require proxy!)
+    const url = `https://auth.roblox.com/v1/usernames/validate?username=${encodeURIComponent(name)}&birthday=2000-01-01&context=Signup`;
+    
+    const r = await fetch(url, { 
+      method: "GET",
+      mode: "cors",           // will likely fail without proxy
+      cache: "no-cache"
+    });
+
+    if (!r.ok) throw new Error("HTTP " + r.status);
+
+    const data = await r.json();
+
+    if (data.code === 0) {
+      // Available
+      available++;
+      availEl.textContent = available;
+      addLog(`✔  ${name}  → AVAILABLE`, "ok");
+    } else if (data.code === 10) {
+      addLog(`✖  ${name}  taken`, "bad");
+    } else {
+      addLog(`⚠  ${name}  → ${data.message || "invalid"}`, "error");
+    }
+  } catch (err) {
+    addLog(`⚠ ERROR  ${name}  → ${err.message}`, "error");
+  }
+}
+
+function startScan() {
+  if (running) return;
+  running = true;
+  checked = 0; available = 0;
+  countEl.textContent = "0";
+  availEl.textContent = "0";
+
+  startBtn.disabled = true;
+  stopBtn.disabled = false;
+  statusEl.textContent = "SCANNING";
+  statusEl.className = "status running";
+
+  const intervalMs = 1000 / parseFloat(document.getElementById("speed").value);
+  timer = setInterval(check, intervalMs);
+}
+
+function stopScan() {
+  running = false;
   clearInterval(timer);
-  start.disabled=false;
-  stop.disabled=true;
-  status.textContent="STOPPED";
-};
+  startBtn.disabled = false;
+  stopBtn.disabled = true;
+  statusEl.textContent = "OFFLINE";
+  statusEl.className = "status stopped";
+}
+
+startBtn.onclick = startScan;
+stopBtn.onclick  = stopScan;
 </script>
 </body>
 </html>
